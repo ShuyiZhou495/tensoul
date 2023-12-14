@@ -323,6 +323,7 @@ function relativeseating(seat0, seat1)
 function generatelog(mjslog)
 {
     let log = [];
+    let unknown=0;
     mjslog.forEach((e, leafidx) =>
     {
         switch (e.constructor.name)
@@ -433,6 +434,7 @@ function generatelog(mjslog)
                         return;
                     }
                     default:
+                        unknown += 1;
                         console.log(
                             "didn't know what to do with " +
                             e.constructor.name + "(" + leafidx + ")"
@@ -484,6 +486,7 @@ function generatelog(mjslog)
                     }
                     default:
                     {
+                        unknown += 1;
                         console.log("didn't know what to do with "
                             + e.constructor.name + " type: " + e.type);
 
@@ -568,15 +571,21 @@ function generatelog(mjslog)
                 return;
             }
             default:
+
+                unknown += 1;
                 console.log(
-                    "didn't know what to do with " + e.constructor.name + "(" + leafidx + ")"
+                    "didn't know what to do with " + e.constructor.name + "(" + leafidx + ")" + Object.keys(e)
                 );
 
             return;
         }
     });
-
-    return log;
+    if(unknown===0){
+        return log;
+    }
+    else{
+        return null;
+    }
 }
 
 //this is the json struct that we write to file
@@ -592,6 +601,9 @@ function parse(record)
     res["ver"]     = "2.3"; // mlog version number
     res["ref"]     = record.head.uuid; // game id - copy and paste into "other" on the log page to view
     res["log"]     = generatelog(mjslog);
+    if(res["log"]===null){
+        return null;
+    }
     //PF4 is yonma, PF3 is sanma
     res["ratingc"] = "PF" + nplayers;
 

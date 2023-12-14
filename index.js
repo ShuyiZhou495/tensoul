@@ -90,7 +90,7 @@ class Client {
       this._is_logged_in = false
       console.error('login triggered')
 
-      await this._mjsoul.sendAsync('heatbeat')
+      // await this._mjsoul.sendAsync('heatbeat')
 
       const login = {
         client_version_string: this._clientVersionString,
@@ -100,6 +100,7 @@ class Client {
         ...config.login
       }
       const res = await this._mjsoul.sendAsync('oauth2Login', login)
+
       console.error('login done')
       this._is_logged_in = true
       this._condvar.emit('logged_in')
@@ -109,6 +110,39 @@ class Client {
       console.error(err.stack || err)
       process.exit(1)
     }
+  }
+  async fetchList(id){
+    let results = [];
+    let start = 0;
+    let log = null;
+    while (!this._is_logged_in) {
+      await new Promise(resolve => this._condvar.once('logged_in', resolve))
+    }
+    while (log === null || log.record_list.length > 0){
+
+      log = await this._mjsoul.sendAsync('fetchGameRecordList', {
+        start: start,
+        count: 100,
+        type: 2
+      })
+      for(let e of log.record_list){
+        // results.push(e.uuid)
+        try{
+          const res = await this.tenhouLogFromMjsoulID(e.uuid)
+          
+          if(res!=null){
+            results.push(res)
+          }
+          
+        }
+        catch(err){
+          console.log(err);
+        }
+      }
+      start += 30
+    }
+
+    return results
   }
 
   async tenhouLogFromMjsoulID(id) {
@@ -160,8 +194,10 @@ class Client {
           return this._mjsoul.root.lookupType(raw.name).decode(raw.data)
         })
     }
-
     const tenhouLog = toTenhou(log)
+    if(tenhouLog === null){
+      return null
+    }
 
     if (targetID != null) {
       for (let acc of log.head.accounts) {
@@ -183,7 +219,9 @@ class Client {
   if (process.argv.length > 2) {
     // CLI
     const id = process.argv[2]
-    const result = await client.tenhouLogFromMjsoulID(id)
+    // MJSoul.record.parse
+    const result = await client.fetchList(id)
+    // const result = await client.tenhouLogFromMjsoulID(id)
     console.log(JSON.stringify(result))
     process.exit(0)
   }
